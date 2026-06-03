@@ -1,0 +1,124 @@
+---
+# Kubernetes Gateway API resources for RustAI Gateway
+apiVersion: gateway.networking.k8s.io/v1
+kind: GatewayClass
+metadata:
+  name: rustai-gateway-class
+  labels:
+    app: rustai-gateway
+spec:
+  controllerName: "gateway.rustai.dev/gateway-controller"
+  description: "RustAI AI Gateway - routes LLM traffic to configured AI providers"
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: rustai-gateway
+  labels:
+    app: rustai-gateway
+spec:
+  gatewayClassName: rustai-gateway-class
+  listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        kinds:
+          - kind: HTTPRoute
+        namespaces:
+          from: Same
+    - name: https
+      protocol: HTTPS
+      port: 443
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - name: rustai-tls
+      allowedRoutes:
+        kinds:
+          - kind: HTTPRoute
+        namespaces:
+          from: Same
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: rustai-chat-route
+  labels:
+    app: rustai-gateway
+spec:
+  parentRefs:
+    - name: rustai-gateway
+  hostnames:
+    - "api.rustai.dev"
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /v1/chat/completions
+      backendRefs:
+        - name: rustai-gateway
+          port: 80
+      filters:
+        - type: RequestHeaderModifier
+          requestHeaderModifier:
+            add:
+              - name: X-Provider
+                value: "openai"
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /health
+      backendRefs:
+        - name: rustai-gateway
+          port: 80
+---
+# Custom Resource: AiGateway - RustAI-specific resource for AI provider configuration
+apiVersion: gateway.rustai.dev/v1
+kind: AiGateway
+metadata:
+  name: openai-gateway
+  labels:
+    app: rustai-gateway
+spec:
+  provider: openai
+  upstreamUrl: "https://api.openai.com"
+  apiKeySecret:
+    name: rustai-secrets
+    key: openai-api-key
+  streaming: true
+  rateLimit:
+    requestsPerSecond: 1000
+    burstSize: 50
+  models:
+    - modelPattern: "gpt-4*"
+      rateLimit:
+        requestsPerSecond: 500
+        burstSize: 25
+    - modelPattern: "gpt-3.5*"
+      rateLimit:
+        requestsPerSecond: 2000
+        burstSize: 100
+  connectionPool:
+    maxConnections: 100
+    idleTimeoutSecs: 60
+---
+apiVersion: gateway.rustai.dev/v1
+kind: AiGateway
+metadata:
+  name: anthropic-gateway
+  labels:
+    app: rustai-gateway
+spec:
+  provider: anthropic
+  upstreamUrl: "https://api.anthropic.com"
+  apiKeySecret:
+    name: rustai-secrets
+    key: anthropic-api-key
+  streaming: true
+  rateLimit:
+    requestsPerSecond: 500
+    burstSize: 25
+  connectionPool:
+    maxConnections: 50
+    idleTimeoutSecs: 60

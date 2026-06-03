@@ -1,0 +1,58 @@
+name = "rustai-gateway"
+version = "0.1.0"
+listen_addr = "0.0.0.0:8080"
+metrics_addr = "0.0.0.0:9090"
+log_level = "info"
+wasm_plugins_dir = "/etc/rustai/plugins"
+
+[[upstreams]]
+id = "openai-main"
+provider = "openai"
+protocol = "rest"
+base_url = "https://api.openai.com"
+api_key = "${OPENAI_API_KEY}"
+timeout_secs = 30
+max_connections = 100
+
+[[upstreams]]
+id = "anthropic-main"
+provider = "anthropic"
+protocol = "rest"
+base_url = "https://api.anthropic.com"
+api_key = "${ANTHROPIC_API_KEY}"
+timeout_secs = 60
+max_connections = 50
+
+[[upstreams]]
+id = "ollama-local"
+provider = "ollama"
+protocol = "rest"
+base_url = "http://localhost:11434"
+timeout_secs = 120
+max_connections = 10
+
+[[routes]]
+id = "chat-completions"
+path_pattern = "/v1/chat/completions"
+methods = ["POST"]
+upstreams = ["openai-main", "anthropic-main", "ollama-local"]
+strip_prefix = false
+
+[[routes]]
+id = "health"
+path_pattern = "/health"
+methods = ["GET"]
+upstreams = ["openai-main"]
+strip_prefix = false
+
+[[routes]]
+id = "proxy-all"
+path_pattern = "/*"
+methods = ["GET", "POST", "PUT", "DELETE"]
+upstreams = ["openai-main"]
+strip_prefix = false
+
+[routes.rate_limit]
+requests_per_second = 1000
+burst_size = 50
+window_secs = 1

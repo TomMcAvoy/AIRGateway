@@ -1,0 +1,22 @@
+[package]
+name = "rustai-k8s-gateway"
+version = "0.1.0"
+edition = "2021"
+description = "Kubernetes-native ingress control plane using Gateway API"
+
+[dependencies]
+rustai-core = { path = "../core" }
+
+async-trait = "0.1"
+tokio = { workspace = true, features = ["sync", "time", "signal"] }
+tracing = { workspace = true }
+serde = { workspace = true, features = ["serde_derive"] }
+serde_json = { workspace = true }
+anyhow = { workspace = true }
+thiserror = { workspace = true }
+k8s-openapi = { workspace = true }
+kube = { workspace = true }
+schemars = { workspace = true }
+dashmap = { workspace = true }
+parking_lot = { workspace = true }
+futures = { workspace = true }

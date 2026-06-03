@@ -1,0 +1,20 @@
+[package]
+name = "rustai-observability"
+version = "0.1.0"
+edition = "2021"
+description = "Prometheus observability stacks for the RustAI Gateway"
+
+[dependencies]
+rustai-core = { path = "../core" }
+
+async-trait = "0.1"
+tokio = { workspace = true, features = ["sync", "net", "time"] }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+prometheus = { workspace = true }
+serde = { workspace = true, features = ["serde_derive"] }
+serde_json = { workspace = true }
+anyhow = { workspace = true }
+thiserror = { workspace = true }
+dashmap = { workspace = true }
+parking_lot = { workspace = true }

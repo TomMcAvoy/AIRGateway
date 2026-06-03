@@ -1,0 +1,33 @@
+[package]
+name = "rustai-proxy"
+version = "0.1.0"
+edition = "2021"
+description = "High-throughput reverse proxy engine with SSE streaming support"
+
+[dependencies]
+rustai-core = { path = "../core" }
+
+async-trait = "0.1"
+tokio = { workspace = true, features = ["sync", "net", "time", "io-util", "signal"] }
+tokio-util = { workspace = true }
+tokio-stream = { workspace = true }
+hyper = { workspace = true }
+hyper-util = { workspace = true }
+http-body = { workspace = true }
+http-body-util = { workspace = true }
+bytes = { workspace = true }
+futures = { workspace = true }
+tower = { workspace = true }
+tracing = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+anyhow = { workspace = true }
+thiserror = { workspace = true }
+dashmap = { workspace = true }
+parking_lot = { workspace = true }
+uuid = { workspace = true }
+reqwest = { workspace = true }
+tls-listener = { workspace = true }
+rustls = { workspace = true }
+rustls-pemfile = { workspace = true }
+pin-project = "1"

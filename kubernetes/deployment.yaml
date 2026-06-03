@@ -1,0 +1,167 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rustai-gateway
+  labels:
+    app: rustai-gateway
+    component: ai-gateway
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: rustai-gateway
+  template:
+    metadata:
+      labels:
+        app: rustai-gateway
+        component: ai-gateway
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9090"
+        prometheus.io/path: "/metrics"
+    spec:
+      serviceAccountName: rustai-gateway
+      containers:
+        - name: rustai-gateway
+          image: rustai/gateway:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8080
+              name: http
+              protocol: TCP
+            - containerPort: 9090
+              name: metrics
+              protocol: TCP
+          env:
+            - name: RUST_LOG
+              value: "info"
+            - name: RUSTAI_LISTEN_ADDR
+              value: "0.0.0.0:8080"
+            - name: RUSTAI_METRICS_ADDR
+              value: "0.0.0.0:9090"
+            - name: OPENAI_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: rustai-secrets
+                  key: openai-api-key
+                  optional: true
+            - name: ANTHROPIC_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: rustai-secrets
+                  key: anthropic-api-key
+                  optional: true
+          resources:
+            requests:
+              cpu: "500m"
+              memory: "256Mi"
+            limits:
+              cpu: "2000m"
+              memory: "1Gi"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 3
+            periodSeconds: 5
+          volumeMounts:
+            - name: config
+              mountPath: /app/rustai.toml
+              subPath: rustai.toml
+            - name: plugins
+              mountPath: /etc/rustai/plugins
+      volumes:
+        - name: config
+          configMap:
+            name: rustai-config
+        - name: plugins
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: rustai-gateway
+  labels:
+    app: rustai-gateway
+spec:
+  selector:
+    app: rustai-gateway
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8080
+      protocol: TCP
+    - name: metrics
+      port: 9090
+      targetPort: 9090
+      protocol: TCP
+  type: ClusterIP
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: rustai-config
+data:
+  rustai.toml: |
+    name = "rustai-gateway"
+    listen_addr = "0.0.0.0:8080"
+    metrics_addr = "0.0.0.0:9090"
+    log_level = "info"
+
+    [[upstreams]]
+    id = "openai"
+    provider = "openai"
+    protocol = "rest"
+    base_url = "https://api.openai.com"
+    api_key = "${OPENAI_API_KEY}"
+    timeout_secs = 30
+    max_connections = 100
+
+    [[routes]]
+    id = "chat"
+    path_pattern = "/v1/chat/completions"
+    methods = ["POST"]
+    upstreams = ["openai"]
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: rustai-gateway
+  labels:
+    app: rustai-gateway
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: rustai-gateway
+  labels:
+    app: rustai-gateway
+rules:
+  - apiGroups: ["gateway.rustai.dev"]
+    resources: ["aigateways", "aigateways/status"]
+    verbs: ["get", "list", "watch", "patch", "update"]
+  - apiGroups: [""]
+    resources: ["secrets", "configmaps"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: rustai-gateway
+  labels:
+    app: rustai-gateway
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: rustai-gateway
+subjects:
+  - kind: ServiceAccount
+    name: rustai-gateway
+    namespace: default

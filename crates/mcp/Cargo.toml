@@ -1,0 +1,21 @@
+[package]
+name = "rustai-mcp"
+version = "0.1.0"
+edition = "2021"
+description = "Model Context Protocol (MCP) native backend supporting autonomous AI agents"
+
+[dependencies]
+rustai-core = { path = "../core" }
+
+async-trait = "0.1"
+tokio = { workspace = true, features = ["sync", "net", "io-util"] }
+tokio-util = { workspace = true }
+serde = { workspace = true, features = ["serde_derive"] }
+serde_json = { workspace = true }
+tracing = { workspace = true }
+uuid = { workspace = true }
+anyhow = { workspace = true }
+thiserror = { workspace = true }
+dashmap = { workspace = true }
+parking_lot = { workspace = true }
+futures = { workspace = true }
