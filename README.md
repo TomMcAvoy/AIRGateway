@@ -1,4 +1,4 @@
-# RustAI Gateway
+# AIRGateway
 
 **Author:** Thomas McAvoy — Chief Performance Engineer
 
